@@ -412,6 +412,19 @@ dvb_adapter_init(uint32_t adapter_mask)
     dvb_mux_load(tda);
 }
 
+/**
+ *
+ */
+th_dvb_adapter_t *
+dvb_adapter_get(uint32_t adapter_num)
+{
+  th_dvb_adapter_t *tda;
+
+  TAILQ_FOREACH(tda, &dvb_adapters, tda_global_link)
+    if (tda->tda_adapter_num == adapter_num)
+      return tda;
+  return NULL;  
+}
 
 /**
  * If nobody is subscribing, cycle thru all muxes to get some stats

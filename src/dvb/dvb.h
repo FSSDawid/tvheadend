@@ -206,6 +206,8 @@ typedef struct th_dvb_adapter {
   int tda_unc_is_delta;  /* 1 if we believe FE_READ_UNCORRECTED_BLOCKS
 			  * return dela values */
 
+  int tda_idle;
+
 } th_dvb_adapter_t;
 
 
@@ -219,6 +221,8 @@ void dvb_init(uint32_t adapter_mask);
  * DVB Adapter
  */
 void dvb_adapter_init(uint32_t adapter_mask);
+
+th_dvb_adapter_t *dvb_adapter_get(uint32_t adapter_num);
 
 void dvb_adapter_mux_scanner(void *aux);
 

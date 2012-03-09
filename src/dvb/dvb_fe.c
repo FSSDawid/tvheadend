@@ -411,6 +411,30 @@ dvb_fe_tune_s2(th_dvb_mux_instance_t *tdmi, dvb_mux_conf_t *dmc)
 /**
  *
  */
+
+static void
+dvb_fe_turn_on_slaves(th_dvb_adapter_t *tda)
+{
+  u_int32_t num = tda->tda_adapter_num;
+  th_dvb_adapter_t *tda2;
+  th_dvb_mux_instance_t *tdmi2;
+
+  /* hack, hack, hack */
+  if (num == 4)
+    return;
+  tda2 = dvb_adapter_get(num ^ 1);
+  if (tda2 == NULL)
+    return;
+  if (tda2->tda_idle) {
+    tdmi2 = LIST_FIRST(&tda2->tda_muxes);
+    if (tdmi2)
+      dvb_fe_tune(tdmi2, "keepalive");
+  }
+}
+
+/**
+ *
+ */
 int
 dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
 {
@@ -437,7 +461,10 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
   if(tda->tda_mux_current != NULL)
     dvb_fe_stop(tda->tda_mux_current);
 
-    
+  tda->tda_idle = 0;
+
+  dvb_fe_turn_on_slaves(tda);
+
   if(tda->tda_type == FE_QPSK) {
 	
     /* DVB-S */
@@ -465,7 +492,7 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
 		 pol == POLARISATION_CIRCULAR_LEFT,
 		 hiband, tda->tda_diseqc_version)) != 0)
       tvhlog(LOG_ERR, "dvb", "diseqc setup failed %d\n", r);
-      
+
     if(hiband)
       p->frequency = abs(p->frequency - hifreq);
     else
@@ -515,14 +542,45 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
 /**
  *
  */
+static int
+dvb_fe_can_stop(th_dvb_adapter_t *tda)
+{
+  u_int32_t num = tda->tda_adapter_num;
+  th_dvb_adapter_t *tda2;
+  
+  if (num >= 4)
+    return 1;
+  tda2 = dvb_adapter_get(num ^ 1);
+  if (tda2 == NULL)
+    return 1;
+  if (tda2->tda_idle == 0) {
+    tvhlog(LOG_DEBUG, "dvb", "\"%s\" is alive, cannot turn \"%s\" off", tda2->tda_rootpath, tda->tda_rootpath);
+    return 0;
+  }
+  if (tda2->tda_mux_current) {
+    tvhlog(LOG_DEBUG, "dvb", "\"%s\" is off", tda2->tda_rootpath);
+    dvb_fe_stop(tda2->tda_mux_current);
+    if (tda2->tda_type == FE_QPSK)
+      diseqc_voltage_off(tda2->tda_fe_fd);
+  }
+  return 1;
+}
+
+/**
+ *
+ */
 void dvb_fe_turn_off(th_dvb_adapter_t *tda)
 {
   lock_assert(&global_lock);
   if (!tda->tda_off)
     return;
-  if (tda->tda_mux_current)
+  if (tda->tda_mux_current) {
+    tda->tda_idle = 1;
+    if (!dvb_fe_can_stop(tda))
+      return;
+    tvhlog(LOG_DEBUG, "dvb", "\"%s\" is off", tda->tda_rootpath);
     dvb_fe_stop(tda->tda_mux_current);
-  if (tda->tda_type == FE_QPSK)
-    diseqc_voltage_off(tda->tda_fe_fd);
-  tvhlog(LOG_DEBUG, "dvb", "\"%s\" is off", tda->tda_rootpath);
+    if (tda->tda_type == FE_QPSK)
+      diseqc_voltage_off(tda->tda_fe_fd);
+  }
 }
