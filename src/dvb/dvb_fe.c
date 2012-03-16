@@ -40,6 +40,8 @@
 #include "notify.h"
 #include "dvr/dvr.h"
 
+//#define MYDEBUG
+
 /**
  * Return uncorrected block (since last read)
  *
@@ -100,6 +102,11 @@ dvb_fe_monitor(void *aux)
    */
   if(ioctl(tda->tda_fe_fd, FE_READ_STATUS, &fe_status))
     fe_status = 0;
+#ifdef MYDEBUG
+  tvhlog(LOG_DEBUG, 
+	   "dvb", "adapter \"%s\", status 0x%x",
+	   tda->tda_displayname, (int)fe_status);
+#endif
 
   if(fe_status & FE_HAS_LOCK)
     status = -1;
@@ -158,6 +165,12 @@ dvb_fe_monitor(void *aux)
     /* signal/noise ratio */
     if(ioctl(tda->tda_fe_fd, FE_READ_SNR, &tdmi->tdmi_snr) == -1)
       tdmi->tdmi_snr = -2;
+
+#ifdef MYDEBUG
+    tvhlog(LOG_DEBUG, 
+	   "dvb", "adapter \"%s\", ber = 0x%x, signal = 0x%x, snr = 0x%x",
+  	   tda->tda_displayname, (int)tdmi->tdmi_ber, (int)tdmi->tdmi_signal, (int)tdmi->tdmi_snr);
+#endif
   }
 
   if(status != tdmi->tdmi_fe_status) {
@@ -191,6 +204,10 @@ dvb_fe_monitor(void *aux)
     notify_by_msg("dvbMux", m);
 
     dvb_mux_save(tdmi);
+  }
+
+  if(status == TDMI_FE_NO_SIGNAL && tdmi->tdmi_fe_status != TDMI_FE_NO_SIGNAL) {
+    dvb_fe_tune(tdmi, "Retune");
   }
 }
 
@@ -428,7 +445,7 @@ dvb_fe_turn_on_slaves(th_dvb_adapter_t *tda)
   if (tda2->tda_idle) {
     tdmi2 = LIST_FIRST(&tda2->tda_muxes);
     if (tdmi2)
-      dvb_fe_tune(tdmi2, "keepalive");
+      dvb_fe_tune(tdmi2, "Keepalive");
   }
 }
 
@@ -450,7 +467,7 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
 
   lock_assert(&global_lock);
 
-  if(tda->tda_mux_current == tdmi)
+  if(tda->tda_mux_current == tdmi && strcmp(reason, "Retune") != 0)
     return 0;
   
   if(tdmi->tdmi_scan_queue != NULL) {
@@ -531,6 +548,7 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
   if(tda->tda_dump_muxes)
     dvb_adapter_open_dump_file(tda);
 
+  tdmi->tdmi_fe_status = TDMI_FE_NO_SIGNAL;
   gtimer_arm(&tda->tda_fe_monitor_timer, dvb_fe_monitor, tda, 1);
 
   dvb_table_add_default(tdmi);
@@ -547,7 +565,10 @@ dvb_fe_can_stop(th_dvb_adapter_t *tda)
 {
   u_int32_t num = tda->tda_adapter_num;
   th_dvb_adapter_t *tda2;
-  
+
+#ifdef MYDEBUG
+  return 1;
+#endif
   if (num >= 4)
     return 1;
   tda2 = dvb_adapter_get(num ^ 1);
