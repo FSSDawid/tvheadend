@@ -88,7 +88,7 @@ dvb_fe_monitor(void *aux)
 {
   th_dvb_adapter_t *tda = aux;
   fe_status_t fe_status;
-  int status, v, update = 0, vv, i, fec, q;
+  int status, v, update = 0, vv, i, fec, q, retune = 0;
   th_dvb_mux_instance_t *tdmi = tda->tda_mux_current;
   char buf[50];
 
@@ -174,6 +174,8 @@ dvb_fe_monitor(void *aux)
   }
 
   if(status != tdmi->tdmi_fe_status) {
+    retune = status == TDMI_FE_NO_SIGNAL &&
+                  tdmi->tdmi_fe_status != TDMI_FE_NO_SIGNAL;
     tdmi->tdmi_fe_status = status;
 
     dvb_mux_nicename(buf, sizeof(buf), tdmi);
@@ -206,7 +208,9 @@ dvb_fe_monitor(void *aux)
     dvb_mux_save(tdmi);
   }
 
-  if(status == TDMI_FE_NO_SIGNAL && tdmi->tdmi_fe_status != TDMI_FE_NO_SIGNAL) {
+  if(retune) {
+    dvb_mux_nicename(buf, sizeof(buf), tdmi);
+    tvhlog(LOG_INFO, "dvb", "\"%s\" retuning to \"%s\"", tda->tda_rootpath, buf);
     dvb_fe_tune(tdmi, "Retune");
   }
 }
@@ -436,8 +440,11 @@ dvb_fe_turn_on_slaves(th_dvb_adapter_t *tda)
   th_dvb_adapter_t *tda2;
   th_dvb_mux_instance_t *tdmi2;
 
+#ifdef MYDEBUG
+  return;
+#endif
   /* hack, hack, hack */
-  if (num == 4)
+  if (num >= 4)
     return;
   tda2 = dvb_adapter_get(num ^ 1);
   if (tda2 == NULL)
