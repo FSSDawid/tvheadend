@@ -173,11 +173,12 @@ dvb_fe_monitor(void *aux)
 #endif
   }
 
+  retune = status == TDMI_FE_NO_SIGNAL &&
+                  tdmi->tdmi_fe_status == TDMI_FE_NO_SIGNAL &&
+                  tdmi->tdmi_fe_status2 != TDMI_FE_NO_SIGNAL;
+  tdmi->tdmi_fe_status2 = tdmi->tdmi_fe_status;
+  tdmi->tdmi_fe_status = status;
   if(status != tdmi->tdmi_fe_status) {
-    retune = status == TDMI_FE_NO_SIGNAL &&
-                  tdmi->tdmi_fe_status != TDMI_FE_NO_SIGNAL;
-    tdmi->tdmi_fe_status = status;
-
     dvb_mux_nicename(buf, sizeof(buf), tdmi);
     tvhlog(LOG_DEBUG, 
 	   "dvb", "\"%s\" on adapter \"%s\", status changed to %s",
@@ -556,6 +557,7 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
     dvb_adapter_open_dump_file(tda);
 
   tdmi->tdmi_fe_status = TDMI_FE_NO_SIGNAL;
+  tdmi->tdmi_fe_status2 = TDMI_FE_NO_SIGNAL;
   gtimer_arm(&tda->tda_fe_monitor_timer, dvb_fe_monitor, tda, 1);
 
   dvb_table_add_default(tdmi);

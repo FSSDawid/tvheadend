@@ -109,7 +109,7 @@ typedef struct th_dvb_mux_instance {
     TDMI_FE_CONSTANT_FEC,
     TDMI_FE_BURSTY_FEC,
     TDMI_FE_OK,
-  } tdmi_fe_status;
+  } tdmi_fe_status, tdmi_fe_status2;
 
   int tdmi_quality;
 
