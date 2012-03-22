@@ -454,7 +454,7 @@ dvb_adapter_mux_scanner(void *aux)
     return;
   }
 
-  if(!tda->tda_idlescan && TAILQ_FIRST(&tda->tda_scan_queues[0]) == NULL) {
+  if(!tda->tda_idlecount && !tda->tda_idlescan && TAILQ_FIRST(&tda->tda_scan_queues[0]) == NULL) {
     /* Idlescan is disabled and no muxes are bad */
 
     if(!tda->tda_qmon)
@@ -466,6 +466,9 @@ dvb_adapter_mux_scanner(void *aux)
     if(tdmi != NULL && tdmi->tdmi_quality > 90)
       goto off;
   }
+
+  if (tda->tda_idlecount > 0)
+    tda->tda_idlecount--;
 
   /* Alternate between the other two (bad and OK) */
   for(i = 0; i < 2; i++) {
