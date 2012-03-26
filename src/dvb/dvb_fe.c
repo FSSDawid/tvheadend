@@ -475,9 +475,12 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
 
   lock_assert(&global_lock);
 
-  if(tda->tda_mux_current == tdmi && strcmp(reason, "Retune") != 0)
-    return 0;
+  if (strcmp(reason, "Retune") == 0)
+    goto retune;
   
+  if(tda->tda_mux_current == tdmi)
+    return 0;
+
   if(tdmi->tdmi_scan_queue != NULL) {
     TAILQ_REMOVE(tdmi->tdmi_scan_queue, tdmi, tdmi_scan_link);
     tdmi->tdmi_scan_queue = NULL;
@@ -490,6 +493,7 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
 
   dvb_fe_turn_on_slaves(tda);
 
+retune:
   if(tda->tda_type == FE_QPSK) {
 	
     /* DVB-S */
@@ -553,6 +557,12 @@ dvb_fe_tune(th_dvb_mux_instance_t *tdmi, const char *reason)
 
   tda->tda_mux_current = tdmi;
 
+  if (strcmp(reason, "Retune") == 0) {
+    tdmi->tdmi_fe_status = TDMI_FE_NO_SIGNAL;
+    tdmi->tdmi_fe_status2 = TDMI_FE_NO_SIGNAL;
+    return 0;
+  }
+
   if(tda->tda_dump_muxes)
     dvb_adapter_open_dump_file(tda);
 
@@ -575,6 +585,8 @@ dvb_fe_can_stop(th_dvb_adapter_t *tda)
   u_int32_t num = tda->tda_adapter_num;
   th_dvb_adapter_t *tda2;
 
+  if (tda->tda_mux_current && tda->tda_mux_current->tdmi_scan_queue)
+    return 0;
 #ifdef MYDEBUG
   return 1;
 #endif

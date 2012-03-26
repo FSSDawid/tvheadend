@@ -64,6 +64,8 @@ tda_alloc(void)
   tda->tda_allpids_dmx_fd = -1;
   tda->tda_dump_fd = -1;
 
+  tda->tda_idle = 1;
+
   return tda;
 }
 
