@@ -168,6 +168,7 @@ typedef struct th_dvb_adapter {
   uint32_t tda_nitoid;
   uint32_t tda_diseqc_version;
   char *tda_displayname;
+  uint32_t tda_idlecount;
 
   int tda_fe_fd;
   int tda_type;
