@@ -63,7 +63,6 @@ tda_alloc(void)
 
   tda->tda_allpids_dmx_fd = -1;
   tda->tda_dump_fd = -1;
-  tda->tda_idle = 1;
 
   return tda;
 }
@@ -455,14 +454,11 @@ dvb_adapter_mux_scanner(void *aux)
     return;
   }
 
-  if(!tda->tda_idlecount && !tda->tda_idlescan && TAILQ_FIRST(&tda->tda_scan_queues[0]) == NULL) {
+  if(!tda->tda_idlescan && TAILQ_FIRST(&tda->tda_scan_queues[0]) == NULL) {
     /* Idlescan is disabled and no muxes are bad */
 
     if(!tda->tda_qmon)
       goto off;	// Quality monitoring is disabled
-
-    if (tda->tda_idlecount > 0)
-        tda->tda_idlecount--;
 
     /* If the currently tuned mux is ok, we can stick to it */
     

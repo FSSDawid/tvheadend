@@ -216,28 +216,6 @@ extjs_dvbadapter(http_connection_t *hc, const char *remain, void *opaque)
 
     out = htsmsg_create_map();
     htsmsg_add_u32(out, "success", 1);
-  } else if(!strcmp(op, "idlescan")) {
-
-    int count;
-
-    s = http_arg_get(&hc->hc_req_args, "count");
-    count = s ? atoi(s) : 0;
-    if (count <= 0) {
-      count = 0;
-      LIST_FOREACH(tdmi, &tda->tda_muxes, tdmi_adapter_link) {
-        count++;
-      }
-      count += count;
-    } else if (count > 10000)
-      count = 10000;
-
-    tvhlog(LOG_NOTICE, "web interface",
-           "Idle scan count set to %i on \"%s\"", count, tda->tda_displayname);
-
-    tda->tda_idlecount = count;
-
-    out = htsmsg_create_map();
-    htsmsg_add_u32(out, "success", 1);
 
   } else {
     pthread_mutex_unlock(&global_lock);
